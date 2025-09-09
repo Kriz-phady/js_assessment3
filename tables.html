@@ -32,22 +32,194 @@
         <div class="left">
           <h3>Product Records</h3>
           <div class="section-container">
-            <div class="section-header">Details of avalialble products</div>
+            <div class="section-header">Details of available products</div>
             <div class="section-content">
-              <h4>Implement here..</h4>
+              <div id="loader" class="loader"></div>
+              <div id="table-container" style="display: none;"></div>
             </div>
           </div>
         </div>
         <div class="right"></div>
       </div>
     </div>
+
+    <div id="deleteModal" class="modal">
+      <div class="modal-content">
+        <span class="close" id="closeDeleteModal">&times;</span>
+        <h3>Confirm Deletion</h3>
+        <p>Are you sure you want to delete this product?</p>
+        <div class="modal-buttons">
+          <button id="confirmDeleteBtn">Delete</button>
+          <button id="cancelDeleteBtn">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="editModal" class="modal">
+      <div class="modal-content">
+        <span class="close" id="closeEditModal">&times;</span>
+        <h3>Edit Product</h3>
+        <form id="editForm">
+          <input type="hidden" id="edit-id" />
+          <label class="label" for="edit-name">Product Name</label>
+          <input type="text" id="edit-name" name="name" /><br />
+          <label class="label" for="edit-price">Price</label>
+          <input type="number" id="edit-price" name="price" /><br />
+          <label class="label" for="edit-quantity">Quantity</label>
+          <input type="number" id="edit-quantity" name="quantity" /><br />
+          <label class="label" for="edit-description">Description</label>
+          <textarea rows="6" id="edit-description" name="description"></textarea
+          ><br />
+          <button class="form-button" id="saveEditBtn">Save Changes</button>
+        </form>
+      </div>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-      $("document").ready(() => {
+      $(document).ready(() => {
         $("#toggle-nav").click(() => {
           $("#sidebar").toggle();
         });
-        //
+
+        const tableContainer = $("#table-container");
+        const loader = $("#loader");
+
+        const renderTable = async () => {
+          try {
+            const response = await fetch("http://localhost:3000/products");
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            const products = await response.json();
+
+            let tableHtml =
+              "<table><thead><tr><th>ID</th><th>Name</th><th>Price</th><th>Quantity</th><th>Description</th><th>Actions</th></tr></thead><tbody>";
+            products.forEach((product) => {
+              tableHtml += `
+                <tr data-id="${product.id}">
+                  <td>${product.id}</td>
+                  <td>${product.name}</td>
+                  <td>${product.price}</td>
+                  <td>${product.quantity}</td>
+                  <td>${product.description}</td>
+                  <td>
+                    <button class="edit-btn" data-id="${product.id}">Edit</button>
+                    <button class="delete-btn" data-id="${product.id}">Delete</button>
+                  </td>
+                </tr>
+              `;
+            });
+            tableHtml += "</tbody></table>";
+            tableContainer.html(tableHtml);
+            tableContainer.show();
+          } catch (error) {
+            console.error("Failed to fetch products:", error);
+            tableContainer.html("<p>Failed to load products. Please check server connection.</p>").show();
+          }
+        };
+
+        // Loading animation
+        setTimeout(() => {
+          loader.hide();
+          renderTable();
+        }, 3000);
+
+        // --- Delete functionality ---
+        const deleteModal = $("#deleteModal");
+        let productIdToDelete = null;
+
+        tableContainer.on("click", ".delete-btn", function () {
+          productIdToDelete = $(this).data("id");
+          deleteModal.show();
+        });
+
+        $("#closeDeleteModal, #cancelDeleteBtn").click(() => {
+          deleteModal.hide();
+        });
+
+        $("#confirmDeleteBtn").click(async () => {
+          try {
+            const response = await fetch(
+              `http://localhost:3000/products/${productIdToDelete}`,
+              {
+                method: "DELETE",
+              }
+            );
+            if (response.ok) {
+              await renderTable(); // Re-render table on success
+            } else {
+              alert("Failed to delete product.");
+            }
+          } catch (error) {
+            console.error("Deletion error:", error);
+            alert("Failed to delete product. Check network connection.");
+          } finally {
+            deleteModal.hide();
+          }
+        });
+
+        // --- Edit functionality ---
+        const editModal = $("#editModal");
+        const editForm = $("#editForm");
+        let productIdToEdit = null;
+
+        tableContainer.on("click", ".edit-btn", async function () {
+          productIdToEdit = $(this).data("id");
+          try {
+            const response = await fetch(
+              `http://localhost:3000/products/${productIdToEdit}`
+            );
+            const product = await response.json();
+            $("#edit-id").val(product.id);
+            $("#edit-name").val(product.name);
+            $("#edit-price").val(product.price);
+            $("#edit-quantity").val(product.quantity);
+            $("#edit-description").val(product.description);
+            editModal.show();
+          } catch (error) {
+            console.error("Error fetching product for edit:", error);
+            alert("Failed to load product data for editing.");
+          }
+        });
+
+        $("#closeEditModal").click(() => {
+          editModal.hide();
+        });
+
+        editForm.submit(async (e) => {
+          e.preventDefault();
+          const updatedProduct = {
+            id: $("#edit-id").val(),
+            name: $("#edit-name").val(),
+            price: parseFloat($("#edit-price").val()),
+            quantity: parseFloat($("#edit-quantity").val()),
+            description: $("#edit-description").val(),
+          };
+
+          try {
+            const response = await fetch(
+              `http://localhost:3000/products/${productIdToEdit}`,
+              {
+                method: "PUT",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(updatedProduct),
+              }
+            );
+            if (response.ok) {
+              await renderTable(); // Re-render table on success
+            } else {
+              alert("Failed to update product.");
+            }
+          } catch (error) {
+            console.error("Update error:", error);
+            alert("Failed to update product. Check network connection.");
+          } finally {
+            editModal.hide();
+          }
+        });
       });
     </script>
   </body>
