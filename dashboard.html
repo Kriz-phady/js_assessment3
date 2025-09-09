@@ -54,19 +54,36 @@
           </div>
         </div>
         <div class="charts-container">
-          <h4>Implement here..</h4>
+          <div class="chart-card magenta">
+            <h3>Sales Trend</h3>
+            <canvas id="salesTrendChart"></canvas>
+          </div>
+
+          <div class="chart-card red">
+            <h3>Site Visitors</h3>
+            <canvas id="visitorsChart"></canvas>
+          </div>
+
+          <div class="chart-card l">
+            <h3>Sold Products</h3>
+            <canvas id="soldProductsChart"></canvas>
+          </div>
+
+          <div class="chart-card purple">
+            <h3>Top Products</h3>
+            <canvas id="topProductsChart"></canvas>
+          </div>
         </div>
       </div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-      $("document").ready(() => {
+      $(document).ready(() => {
         $("#toggle-nav").click(() => {
           $("#sidebar").toggle();
         });
 
-        // Function to fetch dashboard data
         const getDashboardStats = async () => {
           try {
             const response = await fetch("http://localhost:3000/dash stats");
@@ -80,8 +97,143 @@
           }
         };
 
-        // Call the function on page load
+        const createSalesTrendChart = async () => {
+          try {
+            const response = await fetch("http://localhost:3000/sales trend");
+            const data = await response.json();
+            const xValues = data.map((d) => d.x);
+            const yValues = data.map((d) => d.y);
+            const ctx = document.getElementById("salesTrendChart").getContext("2d");
+            new Chart(ctx, {
+              type: "scatter",
+              data: {
+                datasets: [
+                  {
+                    pointBackgroundColor: "#0287a9",
+                    pointRadius: 5,
+                    data: data,
+                  },
+                ],
+              },
+              options: {
+                scales: {
+                  xAxes: [{}],
+                  yAxes: [{}],
+                },
+                legend: { display: false },
+                title: { display: false },
+              },
+            });
+          } catch (error) {
+            console.error("Error fetching sales trend data:", error);
+          }
+        };
+
+        const createVisitorsChart = async () => {
+          try {
+            const response = await fetch("http://localhost:3000/visitors");
+            const data = await response.json();
+            const dates = data.map((item) => item.date);
+            const visitors = data.map((item) => item.visitors);
+            const ctx = document.getElementById("visitorsChart").getContext("2d");
+            new Chart(ctx, {
+              type: "line",
+              data: {
+                labels: dates,
+                datasets: [
+                  {
+                    label: "Visitors",
+                    data: visitors,
+                    borderColor: "#304ccb",
+                    fill: false,
+                  },
+                ],
+              },
+              options: {
+                legend: { display: false },
+              },
+            });
+          } catch (error) {
+            console.error("Error fetching visitors data:", error);
+          }
+        };
+
+        const createSoldProductsChart = async () => {
+          try {
+            const response = await fetch("http://localhost:3000/sold products");
+            const data = await response.json();
+            const labels = data.map((item) => item.category);
+            const values = data.map((item) => item.count);
+            const ctx = document.getElementById("soldProductsChart").getContext("2d");
+            new Chart(ctx, {
+              type: "pie",
+              data: {
+                labels: labels,
+                datasets: [
+                  {
+                    backgroundColor: [
+                      "#b91d47",
+                      "#00aba9",
+                      "#2b5797",
+                      "#e8c3b9",
+                      "#1e7145",
+                    ],
+                    data: values,
+                  },
+                ],
+              },
+              options: {
+                title: {
+                  display: true,
+                  text: "Sold Products by Category",
+                },
+              },
+            });
+          } catch (error) {
+            console.error("Error fetching sold products data:", error);
+          }
+        };
+
+        const createTopProductsChart = async () => {
+          try {
+            const response = await fetch("http://localhost:3000/top products");
+            const data = await response.json();
+            const labels = data.map((item) => item.product);
+            const sales = data.map((item) => item.sales);
+            const ctx = document.getElementById("topProductsChart").getContext("2d");
+            new Chart(ctx, {
+              type: "bar",
+              data: {
+                labels: labels,
+                datasets: [
+                  {
+                    backgroundColor: "#304ccb",
+                    data: sales,
+                  },
+                ],
+              },
+              options: {
+                legend: { display: false },
+                title: {
+                  display: true,
+                  text: "Top Products by Sales",
+                },
+                scales: {
+                  yAxes: [{ ticks: { beginAtZero: true } }],
+                },
+              },
+            });
+          } catch (error) {
+            console.error("Error fetching top products data:", error);
+          }
+        };
+
+        // Call functions to load data and create charts
         getDashboardStats();
+        createSalesTrendChart();
+        createVisitorsChart();
+        createSoldProductsChart();
+        createTopProductsChart();
       });
     </script>
   </body>
